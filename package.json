@@ -1,0 +1,9 @@
+{
+	"name": "onfury",
+	"version": "0",
+	"main": "server.js",
+	"dependencies": {
+		"jsonwebtoken": "^7.4.1",
+		"socket.io": "^2.0.3"
+	}
+}
