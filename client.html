@@ -4,11 +4,82 @@
 		<meta charset="UTF-8">
 		<title>Onufry</title>
 		<script src="/socket.io/socket.io.js"></script>
-		<script>
-		</script>
+		<script src="https://unpkg.com/vue"></script>
 		<style>
 		</style>
 	</head>
 	<body>
+		<div id="app">
+			<form v-on:submit.prevent="open">
+				<input placeholder="opis" required>
+				<input type="number" placeholder="minut" min=0 required>
+				<input type="submit" value="Otwórz zamówienie">
+			</form>
+			<ul>
+				<li v-for="(order, index) in orders">
+					<p>{{order.content}} <em>{{order.author}}</em> {{order.closes-Date.now()}}</p>
+					<ul>
+						<li v-for="item in order.items">
+							<p>{{item.content}} <em>{{item.author}}</em></p>
+						</li>
+					</ul>
+					<form v-if="order.closes>Date.now()"  v-on:submit.prevent="take">
+						<input type="hidden" :value="index">
+						<input placeholder="zamów" required>
+					</form>
+				</li>
+			</ul>
+			<p v-if="token">Zalogowany jako {{token|jwt_payload}} </p>
+			<button v-if="token" v-on:click="logout">Wyloguj</button>
+			<input v-if="!token" v-on:keydown.enter="login" placeholder="zaloguj">
+		</div>
+		<script>
+			var ve = new Vue({
+				el: "#app",
+				data: {
+					orders: [],
+					token: null,
+				},
+				watch: {
+					token () {
+						if(this.socket)
+							this.socket.close()
+						if(this.token != null)
+							this.socket = io({query:{token: this.token}}).on('update',(orders) => {
+								this.orders = orders;
+							});
+						localStorage.setItem('token', this.token);
+					}
+				},
+				filters: {
+					jwt_payload (value) {
+						return atob(value.split('.')[1]);
+					}
+				},
+				methods: {
+					login (event) {
+						this.token = event.target.value;
+					},
+					logout (event) {
+						this.token = null;
+					},
+					open (event) {
+						this.socket.emit('open',event.target[0].value,Date.now()+event.target[1].value*60*1000);
+						event.target.reset();
+					},
+					take (event) {
+						this.socket.emit('take',+event.target[0].value, event.target[1].value);
+						event.target.reset();
+					}
+				},
+				created() {
+					this.socket = null;
+					this.token = localStorage.getItem('token');
+					setInterval(() => {
+						this.$forceUpdate();
+					},1000);
+				}
+			});
+		</script>
 	</body>
 </html>

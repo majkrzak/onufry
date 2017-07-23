@@ -39,17 +39,17 @@ require('socket.io')(require('http').createServer((req, res) => {
 		socket.on('open', (content, closes) => {
 			orders.push({
 				author: socket.user,
-				connect: content,
+				content: content,
 				closes: closes,
 				items: []
 			});
 			socket.server.emit('update', orders);
 		});
 		socket.on('take', (idx, content) => {
-			if (a[idx] && a[idx].closes > Date.now()) {
-				a[idx].items.push({
+			if (orders[idx] && orders[idx].closes > Date.now()) {
+				orders[idx].items.push({
 					author: socket.user,
-					content: connect
+					content: content
 				});
 			};
 			socket.server.emit('update', orders);
