@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
-orders = [];
-
 /*
 	{
+		date: 1234,
 		author: 'Piotr Majkrzak',
 		content: 'Kebab z OzUrfa'
-		closes: '1123',
+		closes: 1123,
 		items: [
 			{
+				date: 1234,
 				author: 'Piotr Majkrzak'
 				content: 'bółka kurczak czosnek'
 			}
@@ -16,13 +16,25 @@ orders = [];
 	}
 */
 
-const key = require('fs').readFileSync('./pub.pem');
+const key = process.env.KEY || "";
+const port = process.env.PORT || 8080;
 const client = require('fs').readFileSync('./client.html');
 
+var orders = [];
+var stats = {
+	started: Date.now(),
+	clients: 0,
+};
+
 require('socket.io')(require('http').createServer((req, res) => {
-		res.writeHead(200);
-		res.end(client);
-	}).listen(8080))
+		if (req.url == '/') {
+			res.writeHead(200);
+			res.end(client);
+		} else {
+			res.writeHead(404);
+			res.end();
+		}
+	}).listen(port))
 
 	.use((socket, next) => {
 		require('jsonwebtoken').verify(socket.handshake.query.token, key, function(err, decoded) {
@@ -35,7 +47,8 @@ require('socket.io')(require('http').createServer((req, res) => {
 	})
 
 	.on('connect', (socket) => {
-		socket.server.emit('update', orders);
+		stats.clients += 1;
+		socket.server.emit('update', orders, stats);
 		socket.on('open', (content, closes) => {
 			orders.push({
 				author: socket.user,
@@ -43,7 +56,12 @@ require('socket.io')(require('http').createServer((req, res) => {
 				closes: closes,
 				items: []
 			});
-			socket.server.emit('update', orders);
+			socket.server.emit('update', orders, stats);
+		});
+		socket.on('close', (idx) => {
+			if (orders[idx] && orders[idx].author == socket.user) {
+				delete orders[idx];
+			}
 		});
 		socket.on('take', (idx, content) => {
 			if (orders[idx] && orders[idx].closes > Date.now()) {
@@ -52,6 +70,19 @@ require('socket.io')(require('http').createServer((req, res) => {
 					content: content
 				});
 			};
-			socket.server.emit('update', orders);
+			socket.server.emit('update', orders, stats);
+		});
+		socket.on('drop', (idx, jdx) => {
+			if (orders[idx] && orders[idx].items[jdx] && orders[idx].items[jdx] == socket.user) {
+				delete orders[idx].items[jdx];
+			}
+		});
+		socket.on('stop', (idx) => {
+			if (orders[idx] && orders[idx].author == socket.user) {
+				orders[idx].closes = 0;
+			}
+		});
+		socket.on('disconnect', () => {
+			stats.clients -= 1;
 		});
 	});
