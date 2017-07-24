@@ -68,6 +68,7 @@ require('socket.io')(require('http').createServer((req, res) => {
 		socket.on('close', (idx) => {
 			if (orders[idx] && orders[idx].author == socket.user) {
 				delete orders[idx];
+				socket.update();
 			}
 		});
 		socket.on('take', (idx, content) => {
