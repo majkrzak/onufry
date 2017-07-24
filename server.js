@@ -46,9 +46,16 @@ require('socket.io')(require('http').createServer((req, res) => {
 		});
 	})
 
+	.use((socket, next) => {
+		socket.update = () => {
+			socket.server.emit('update', orders, stats)
+		};
+		next();
+	})
+
 	.on('connect', (socket) => {
 		stats.clients += 1;
-		socket.server.emit('update', orders, stats);
+		socket.update();
 		socket.on('open', (content, closes) => {
 			orders.push({
 				author: socket.user,
@@ -56,7 +63,7 @@ require('socket.io')(require('http').createServer((req, res) => {
 				closes: closes,
 				items: []
 			});
-			socket.server.emit('update', orders, stats);
+			socket.update();
 		});
 		socket.on('close', (idx) => {
 			if (orders[idx] && orders[idx].author == socket.user) {
@@ -69,20 +76,23 @@ require('socket.io')(require('http').createServer((req, res) => {
 					author: socket.user,
 					content: content
 				});
+				socket.update();
 			};
-			socket.server.emit('update', orders, stats);
 		});
 		socket.on('drop', (idx, jdx) => {
 			if (orders[idx] && orders[idx].items[jdx] && orders[idx].items[jdx] == socket.user) {
 				delete orders[idx].items[jdx];
+				socket.update();
 			}
 		});
 		socket.on('stop', (idx) => {
 			if (orders[idx] && orders[idx].author == socket.user) {
 				orders[idx].closes = 0;
+				socket.update();
 			}
 		});
 		socket.on('disconnect', () => {
 			stats.clients -= 1;
+			socket.update();
 		});
 	});
