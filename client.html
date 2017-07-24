@@ -16,10 +16,10 @@
 				<input type="submit" value="Otwórz zamówienie">
 			</form>
 			<ul>
-				<li v-for="(order, index) in orders">
+				<li v-for="(order, index) in orders" v-if="order">
 					<p>{{order.content}} <em>{{order.author}}</em> {{order.closes-Date.now()}}</p>
 					<ul>
-						<li v-for="item in order.items">
+						<li v-for="item in order.items" v-if="item">
 							<p>{{item.content}} <em>{{item.author}}</em></p>
 						</li>
 					</ul>
